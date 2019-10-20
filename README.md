@@ -1,8 +1,6 @@
 # Jamnetic Algorhythms
 
-Build your own improvisation!
-
-TODO file details here
+Build your own improvisation! [Presentation link](https://docs.google.com/presentation/d/1RAhDPbYeFIr2DY1zRlA3OiqJQaPXbZHKo3N5k62ZCLk/edit?usp=sharing)
 
 ## Setup
 
