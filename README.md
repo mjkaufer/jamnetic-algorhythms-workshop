@@ -4,7 +4,7 @@ Build your own improvisation!
 
 ## Setup
 
-Install the `music21` python package and you're good to go!
+Install the `music21` and the `midiutil` python packages and you're good to go!
 
 ## Making Songs
 
