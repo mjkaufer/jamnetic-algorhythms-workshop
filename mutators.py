@@ -1,0 +1,180 @@
+from note_util import isMeasureSilent, GANote, getNonRestNotes
+from random import random, choice, shuffle, sample, choices
+
+# all functions here have same args, and will return an array of notes, mutates `currentPiece` argument
+# return false if operation fails for some reason, so we know to run a different mutator on the current function
+
+
+def getMutators():
+    return [pickRandomChordTone, copyNoteInMeasure, transposeWholeNote, subdivide, copyNoteFromSimilarChord, shiftNotes, shuffleNotes, dropNote, swapNotes]
+
+def getRandomMutator(duration = 0):
+    # we can parameterize the likeliness we pick a given mutator based on the length of the note!
+    # here, we want the odds that we subdivide an already small note to be small
+    quanta = (duration / 4.0) ** 1.5
+
+    # these probabilities line up w/ the mutators object above
+    # also they're relative weights so don't worry about normalizing
+    mutator_probabilities = [0.25, 0.125, 0.125, 0.25 * quanta, 0.05, 0.05, 0.05, 0.05, 0.05]
+
+    # because normal choice doesn't support weights :P
+    return choices(getMutators(), weights=mutator_probabilities)[0]
+
+def pickRandomChordTone(currentPiece, chordProgression, measureIndex, noteIndex):
+    original_midi_note = currentPiece[measureIndex][noteIndex].midi_note
+
+    new_midi_note = choice(chordProgression[measureIndex])
+
+    delta = original_midi_note - new_midi_note
+    while abs(delta) > 6:
+        # try to bring them closer together
+        if delta < 0:
+            new_midi_note -= 12
+        else:
+            new_midi_note += 12
+
+        delta = original_midi_note - new_midi_note
+
+    currentPiece[measureIndex][noteIndex].midi_note = new_midi_note
+    return True
+
+def copyNoteInMeasure(currentPiece, chordProgression, measureIndex, noteIndex):
+    currentPiece[measureIndex][noteIndex].midi_note = choice(currentPiece[measureIndex]).midi_note
+    return True
+
+def transposeWholeNote(currentPiece, chordProgression, measureIndex, noteIndex):
+    note = currentPiece[measureIndex][noteIndex]
+
+    transpose = 2
+    if random() > 0.5:
+        transpose *= -1
+
+    currentPiece[measureIndex][noteIndex].midi_note = note.midi_note + transpose
+    return True
+
+def becomeLeadingNote(currentPiece, chordProgression, measureIndex, noteIndex):
+    measure = currentPiece[measureIndex]
+    is_last_note = (noteIndex == len(measure) - 1)
+
+    # if it's literally the last note
+    if (measureIndex == len(currentPiece) - 1 and is_last_note) or (not is_last_note and measure[noteIndex + 1].midi_note is None) or (currentPiece[measureIndex + 1][0].midi_note is None):
+        return False
+
+    next_note = None
+
+    if is_last_note:
+        next_note = currentPiece[measureIndex + 1][0].midi_note
+    else:
+        next_note = measure[noteIndex + 1].midi_note
+
+    delta = 1
+    if random() < 0.5:
+        delta = -1
+
+    currentPiece[measureIndex][noteIndex].midi_note = (next_note + delta)
+    return True
+
+
+def subdivide(currentPiece, chordProgression, measureIndex, noteIndex):
+    p = random()
+
+    note = currentPiece[measureIndex][noteIndex]
+
+    note_array = []
+
+    if p < 0.5:
+        # even subdivision
+        note_array = [note.clone(new_duration=note.duration / 2.0), note.clone(new_duration=note.duration / 2.0)]
+    elif p < 0.75:
+        # triplet
+        note_array = [note.clone(new_duration=note.duration / 3.0), note.clone(new_duration=note.duration / 3.0), note.clone(new_duration=note.duration / 3.0)]
+    else:
+        # dotted
+        long_note = note.clone(new_duration=note.duration * 0.75)
+        short_note = note.clone(new_duration=note.duration * 0.25)
+
+        if random() < 0.5:
+            note_array = [long_note, short_note]
+        else:
+            note_array = [short_note, long_note]
+
+
+    measure = currentPiece[measureIndex]
+
+    currentPiece[measureIndex] = measure[:noteIndex] + note_array + measure[noteIndex+1:]
+
+    return True
+
+def copyNoteFromSimilarChord(currentPiece, chordProgression, measureIndex, noteIndex):
+    target_chord = chordProgression[measureIndex]
+
+    measure_indices_with_same_chord = []
+
+    for i in range(len(chordProgression)):
+        if i == measureIndex:
+            continue
+
+        chord = chordProgression[i]
+        if chord == target_chord:
+            measure = currentPiece[measureIndex]
+
+            if not isMeasureSilent(measure):
+                measure_indices_with_same_chord.append(i)
+
+    if len(measure_indices_with_same_chord) == 0:
+        return False
+
+    similar_index = choice(measure_indices_with_same_chord)
+    note_possibilities = getNonRestNotes(currentPiece[similar_index])
+
+    if len(note_possibilities) == 0:
+        return False
+
+    currentPiece[measureIndex][noteIndex].midi_note = currentPiece[similar_index][choice(note_possibilities)].midi_note
+    return True
+
+def shiftNotes(currentPiece, chordProgression, measureIndex, noteIndex):
+    measure = currentPiece[measureIndex]
+
+    notes = [note.midi_note for note in measure]
+
+    # TODO, consider deltas > 1
+    delta = 1
+    if random() < 0.5:
+        delta = -1
+
+    for i in range(len(notes)):
+        shifted_index = (i + delta + len(notes)) % len(notes)
+        currentPiece[measureIndex][i].midi_note = notes[shifted_index]
+
+    return True
+
+def shuffleNotes(currentPiece, chordProgression, measureIndex, noteIndex):
+    shuffle(currentPiece[measureIndex])
+    return True
+
+def dropNote(currentPiece, chordProgression, measureIndex, noteIndex):
+    measure = currentPiece[measureIndex]
+
+    random_index = int(random() * len(measure))
+
+    currentPiece[measureIndex][random_index].midi_note = None
+
+    return True
+
+def swapNotes(currentPiece, chordProgression, measureIndex, noteIndex):
+    measure = currentPiece[measureIndex]
+
+    # not enough notes to swap
+    if len(measure) <= 1:
+        return False
+
+    a, b = sample(range(0, len(measure)), 2)
+
+    temp = measure[a]
+    measure[a] = measure[b]
+    measure[b] = temp
+
+    currentPiece[measureIndex] = measure
+
+    return True
