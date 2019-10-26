@@ -21,11 +21,11 @@ class GANote:
     def is_rest(self):
         return self.midi_note is None
 
-    def clone(self, new_midi_note=-1, new_duration=-1):
-        if new_midi_note == -1:
+    def clone(self, new_midi_note=None, new_duration=None):
+        if new_midi_note is None:
             new_midi_note = self.midi_note
 
-        if new_duration == -1:
+        if new_duration is None:
             new_duration = self.duration
 
         return GANote(new_midi_note, new_duration)
@@ -120,7 +120,7 @@ def writePiece(piece, chord_progression, title='Genetic Algos', filename='./piec
                     # tbh idk what this does, I guess it just gets rid of boring ol' root notes?
                     if i == 0 and len(chord) > 2:
                         continue
-                        
+
                     note = chord[i]
                     mf.addNote(track, chord_channel, note - 24, time, 1, volume // 2)
 
