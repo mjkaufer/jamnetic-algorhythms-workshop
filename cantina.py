@@ -19,8 +19,6 @@ Bb   = transpose(M, root_c - 2)
 Bdim = transpose(dim, root_c - 1)
 F1   = transpose(in1, root_c + 5)
 
-
-
 chord_progression = [
     Dm, Dm, C7, F,
     Dm, Dm, G7, C7,

@@ -48,7 +48,6 @@ for gen_num in range(iter_count):
     title = '{} ft. Genetic Algos, Gen {}'.format(piece_title, gen_num)
 
     for index in [0, len(population) - 1]:
-        fname = root_dir + 'Seed{}-Gen{}-Rank{}.mid'.format(seed_num, gen_num, index)
+        fname = root_dir + '{}-Seed{:0>2d}-Gen{:0>2d}-Rank{:0>2d}.mid'.format(piece_title.replace(" ", "-"), seed_num, gen_num, index)
         writePiece(population[index], chord_progression, title, fname)
 
-    
